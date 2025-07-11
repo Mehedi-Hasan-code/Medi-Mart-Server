@@ -5,7 +5,7 @@ const { MongoClient, ServerApiVersion } = require('mongodb');
 
 const usersRoutes = require('./routes/usersRoutes');
 const categoriesRoutes = require('./routes/categoriesRoutes');
-
+const medicinesRoutes = require('./routes/medicinesRoutes');
 
 const app = express();
 const port = 3000;
@@ -31,11 +31,13 @@ async function run() {
     // database and collections
     const database = client.db('Medi-Mart');
     const usersCollection = database.collection('users');
-    const categoriesCollection = database.collection('categories')
+    const categoriesCollection = database.collection('categories');
+    const medicinesCollection = database.collection('medicines');
 
     // Mount routes
     app.use('/users', usersRoutes(usersCollection));
-    app.use('/categories', categoriesRoutes(categoriesCollection) )
+    app.use('/categories', categoriesRoutes(categoriesCollection));
+    app.use('/medicines', medicinesRoutes(medicinesCollection))
 
     // Send a ping to confirm a successful connection
     await client.db('admin').command({ ping: 1 });
