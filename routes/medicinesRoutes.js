@@ -22,9 +22,14 @@ module.exports = (medicinesCollection) => {
     }
   });
 
-  router.get('/', async (req, res) => {
+  router.get('/seller', async (req, res) => {
     try {
-      const result = await medicinesCollection.find().toArray();
+      const { email } = req.query;
+      if (!email) {
+        res.status(400).json({ message: 'Seller Email Is Required' });
+      }
+      const query = { seller: email };
+      const result = await medicinesCollection.find(query).toArray();
       res.status(200).json({
         message: 'Medicines fetched successfully',
         medicines: result,

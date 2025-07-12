@@ -23,6 +23,7 @@ const client = new MongoClient(uri, {
   },
 });
 
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -36,7 +37,7 @@ async function run() {
 
     // Mount routes
     app.use('/users', usersRoutes(usersCollection));
-    app.use('/categories', categoriesRoutes(categoriesCollection));
+    app.use('/categories', categoriesRoutes(categoriesCollection, medicinesCollection));
     app.use('/medicines', medicinesRoutes(medicinesCollection))
 
     // Send a ping to confirm a successful connection
