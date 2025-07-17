@@ -24,7 +24,6 @@ const client = new MongoClient(uri, {
   },
 });
 
-
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -35,13 +34,16 @@ async function run() {
     const usersCollection = database.collection('users');
     const categoriesCollection = database.collection('categories');
     const medicinesCollection = database.collection('medicines');
-    const paymentsCollection = database.collection('payments')
+    const paymentsCollection = database.collection('payments');
 
     // Mount routes
     app.use('/users', usersRoutes(usersCollection));
-    app.use('/categories', categoriesRoutes(categoriesCollection, medicinesCollection));
-    app.use('/medicines', medicinesRoutes(medicinesCollection))
-    app.use('/checkout',stripeRoute(paymentsCollection) )
+    app.use(
+      '/categories',
+      categoriesRoutes(categoriesCollection, medicinesCollection)
+    );
+    app.use('/medicines', medicinesRoutes(medicinesCollection));
+    app.use('/checkout', stripeRoute(paymentsCollection));
 
     // Send a ping to confirm a successful connection
     await client.db('admin').command({ ping: 1 });
