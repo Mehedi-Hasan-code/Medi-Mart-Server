@@ -1,20 +1,17 @@
-module.exports = (paymentsCollection) => {
+module.exports = (ordersCollection, paymentsCollection) => {
   const express = require('express');
   const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
   const router = express.Router();
 
   router.post('/', async (req, res) => {
     try {
-      const orderData = req.body;
+      const sellersGroup = req.body;
 
       const getItemsDataForStripe = () => {
-        if (!orderData) return [];
-
-        // Group items by seller first
-        const sellerGroups = orderData.sellers;
+        if (!sellersGroup) return [];
 
         // Convert seller groups to Stripe line items
-        const line_items = sellerGroups.flatMap((sellerGroup) =>
+        const line_items = sellersGroup.flatMap((sellerGroup) =>
           sellerGroup.items.map((item) => ({
             price_data: {
               currency: 'usd',
@@ -37,7 +34,7 @@ module.exports = (paymentsCollection) => {
       };
 
       const line_items = getItemsDataForStripe();
-
+      console;
       const session = await stripe.checkout.sessions.create({
         line_items: line_items,
         mode: 'payment',
@@ -48,7 +45,6 @@ module.exports = (paymentsCollection) => {
         cancel_url: `${process.env.BASE_URL}/canceled`,
       });
 
-      console.log(session);
       res.send(session.url);
     } catch (error) {
       console.error('Stripe checkout error:', error);
@@ -58,8 +54,9 @@ module.exports = (paymentsCollection) => {
     }
   });
 
-  router.get('/', async (req, res) => {
+  router.post('/verify-payment', async (req, res) => {
     const { session_id } = req.query;
+    const OrderData = req.body;
 
     if (!session_id) {
       return res.status(400).json({
@@ -77,15 +74,41 @@ module.exports = (paymentsCollection) => {
         }),
       ]);
 
-      console.log(session);
-
       if (session.payment_status === 'paid') {
+        const transactionId = session.payment_intent.id;
+        OrderData.transactionId = transactionId;
+        const PaymentData = {
+          transactionId: transactionId,
+          buyer: OrderData.buyer,
+          total_amount: OrderData.totalPrice,
+          status: 'pending',
+          payment_method: 'stripe',
+        };
+        const isInserted = await paymentsCollection.findOne({ transactionId });
+
+        if (!isInserted) {
+          const [paymentResult, orderResult] = await Promise.all([
+            paymentsCollection.insertOne(PaymentData),
+            ordersCollection.insertOne(OrderData),
+          ]);
+
+          return res.status(200).json({
+            payment_success: true,
+            insert_success: true,
+            message: 'Payment successful and data is inserted',
+            paymentResult,
+            orderResult,
+          });
+        }
+
         return res.status(200).json({
-          success: true,
-          message: 'Payment successful',
+          payment_success: true,
+          insert_success: false,
+          message: 'Payment successful and data already exist',
           customer_email: session.customer_details.email,
           amount_total: session.amount_total,
           items: lineItems,
+          transactionId: transactionId,
         });
       } else {
         return res.status(400).json({
@@ -98,6 +121,7 @@ module.exports = (paymentsCollection) => {
       console.log('Error verifying session', error.message);
       return res.status(500).json({ error: 'Internal Server Error' });
     }
+    9;
   });
 
   return router;

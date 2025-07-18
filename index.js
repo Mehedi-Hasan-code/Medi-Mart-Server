@@ -8,6 +8,7 @@ const categoriesRoutes = require('./routes/categoriesRoutes');
 const medicinesRoutes = require('./routes/medicinesRoutes');
 const stripeRoute = require('./routes/stripeRoute');
 
+
 const app = express();
 const port = 3000;
 
@@ -34,6 +35,7 @@ async function run() {
     const usersCollection = database.collection('users');
     const categoriesCollection = database.collection('categories');
     const medicinesCollection = database.collection('medicines');
+    const ordersCollection = database.collection('orders');
     const paymentsCollection = database.collection('payments');
 
     // Mount routes
@@ -43,7 +45,7 @@ async function run() {
       categoriesRoutes(categoriesCollection, medicinesCollection)
     );
     app.use('/medicines', medicinesRoutes(medicinesCollection));
-    app.use('/checkout', stripeRoute(paymentsCollection));
+    app.use('/checkout', stripeRoute(paymentsCollection, ordersCollection));
 
     // Send a ping to confirm a successful connection
     await client.db('admin').command({ ping: 1 });
