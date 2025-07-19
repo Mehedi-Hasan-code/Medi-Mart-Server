@@ -4,6 +4,40 @@ module.exports = (usersCollection) => {
   const express = require('express');
   const router = express.Router();
 
+  router.get('/', async (req, res) => {
+    try {
+      const users = await usersCollection.find().toArray();
+      res.status(200).json(users);
+    } catch (error) {
+      console.error(error);
+      res
+        .status(500)
+        .json({ message: 'Internal server error while getting users' });
+    }
+  });
+
+  router.get('/role', async (req, res) => {
+    try {
+      const email = req.query.email;
+      if (!email) {
+        return res
+          .status(400)
+          .json({ message: 'Email query parameter is required' });
+      }
+      const query = { email };
+      const user = await usersCollection.findOne(query);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      res.status(200).json({ role: user.role || null });
+    } catch (error) {
+      console.error('Error fetching user role:', error);
+      res
+        .status(500)
+        .json({ message: 'Internal server error while fetching user role' });
+    }
+  });
+
   router.post('/', async (req, res) => {
     try {
       const userInfo = req.body;
@@ -24,18 +58,6 @@ module.exports = (usersCollection) => {
       res
         .status(500)
         .json({ message: 'Internal server error while creating user.' });
-    }
-  });
-
-  router.get('/', async (req, res) => {
-    try {
-      const users = await usersCollection.find().toArray();
-      res.status(200).json(users);
-    } catch (error) {
-      console.error(error);
-      res
-        .status(500)
-        .json({ message: 'Internal server error while getting users' });
     }
   });
 
@@ -60,11 +82,9 @@ module.exports = (usersCollection) => {
       }
 
       if (result.modifiedCount === 0) {
-        return res
-          .status(200)
-          .json({
-            message: 'User role updated successfully (no changes made)',
-          });
+        return res.status(200).json({
+          message: 'User role updated successfully (no changes made)',
+        });
       }
 
       res.status(200).json({

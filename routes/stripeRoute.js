@@ -1,4 +1,4 @@
-module.exports = (ordersCollection, paymentsCollection) => {
+module.exports = (paymentsCollection, ordersCollection) => {
   const express = require('express');
   const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
   const router = express.Router();
@@ -96,6 +96,10 @@ module.exports = (ordersCollection, paymentsCollection) => {
             payment_success: true,
             insert_success: true,
             message: 'Payment successful and data is inserted',
+            customer_email: session.customer_details.email,
+            amount_total: session.amount_total,
+            items: lineItems,
+            transactionId: transactionId,
             paymentResult,
             orderResult,
           });
