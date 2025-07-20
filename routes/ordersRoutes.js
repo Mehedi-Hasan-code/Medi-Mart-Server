@@ -2,25 +2,68 @@ module.exports = (ordersCollection) => {
   const express = require('express');
   const router = express.Router();
 
-  router.post('/', async (req, res) => {
+  router.get('/', async (req, res) => {
+    const sellerEmail = req.query.sellerEmail;
     try {
-      const orderDetails = req.body
-      if (!orderDetails) {
-        return res.status(400).json({ message: 'Order Details is needed' });
-      }
-      const result = await ordersCollection.insertOne(orderDetails);
-
-      res.status(201).json({
-        message: 'Order placed successfully',
-        orderId: result.insertedId,
-      });
+      const result = await ordersCollection
+        .aggregate([
+          {
+            $match: {
+              'sellersGroup.seller': sellerEmail,
+            },
+          },
+          { $unwind: '$sellersGroup' },
+          {
+            $match: {
+              'sellersGroup.seller': sellerEmail,
+            },
+          },
+          { $unwind: '$sellersGroup.items' },
+          {
+            $addFields: {
+              'sellersGroup.items.discountedPrice': {
+                $toDouble: '$sellersGroup.items.discountedPrice',
+              },
+            },
+          },
+          {
+            $group: {
+              _id: {
+                orderId: '$orderId',
+                buyer: '$buyer',
+                paymentStatus: '$paymentStatus',
+                paymentDate: '$paymentDate',
+                paymentMethod: '$paymentMethod',
+                transactionId: '$transactionId',
+                seller: '$sellersGroup.seller',
+              },
+              totalAmount: { $sum: '$sellersGroup.items.discountedPrice' },
+              items: { $push: '$sellersGroup.items' },
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              orderId: '$_id.orderId',
+              buyer: '$_id.buyer',
+              paymentStatus: '$_id.paymentStatus',
+              paymentDate: '$_id.paymentDate',
+              paymentMethod: '$_id.paymentMethod',
+              transactionId: '$_id.transactionId',
+              seller: '$_id.seller',
+              totalAmount: 1,
+              items: 1,
+            },
+          },
+        ])
+        .toArray();
+      res.status(200).json(result);
     } catch (error) {
-      console.error('Error placing order:', error);
-      res
-        .status(500)
-        .json({ message: 'Failed to place order', error: error.message });
+      res.status(500).json({
+        message: 'Failed to fetch seller orders',
+        error: error.message,
+      });
     }
   });
-
   return router;
 };
