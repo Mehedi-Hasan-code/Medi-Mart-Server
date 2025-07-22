@@ -65,5 +65,45 @@ module.exports = (ordersCollection) => {
       });
     }
   });
+
+  router.get('/sales-report', async (req, res) => {
+    try {
+      const result = await ordersCollection
+        .aggregate([
+          { $unwind: '$sellersGroup' },
+          { $unwind: '$sellersGroup.items' },
+          {
+            $project: {
+              _id: 0,
+              orderId: 1,
+              buyer: '$buyer',
+              seller: '$sellersGroup.seller',
+              itemName: '$sellersGroup.items.name',
+              itemPrice: {
+                $toDouble: '$sellersGroup.items.discountedPrice',
+              },
+              totalPrice: {
+                $toDouble: '$totalPrice',
+              },
+              status: '$paymentStatus',
+            },
+          },
+          {
+            $sort: {
+              orderId: 1,
+              seller: 1,
+            },
+          },
+        ])
+        .toArray();
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).json({
+        message: 'Failed to generate sales report',
+        error: error.message,
+      });
+    }
+  });
+
   return router;
 };
