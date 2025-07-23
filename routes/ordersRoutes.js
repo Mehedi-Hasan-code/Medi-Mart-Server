@@ -2,7 +2,9 @@ module.exports = (ordersCollection) => {
   const express = require('express');
   const router = express.Router();
 
-  router.get('/sellers', async (req, res) => {
+
+  // api for seller payment history page
+  router.get('/sellers/payment-history', async (req, res) => {
     const sellerEmail = req.query.sellerEmail;
     try {
       const result = await ordersCollection
@@ -66,6 +68,8 @@ module.exports = (ordersCollection) => {
     }
   });
 
+
+  // api for admin sales report page
   router.get('/sales-report', async (req, res) => {
     try {
       const result = await ordersCollection
@@ -106,6 +110,7 @@ module.exports = (ordersCollection) => {
     }
   });
 
+  // api for admin dashboard
   router.get('/admin-dashboard', async (req, res) => {
 
     const result = await ordersCollection.aggregate([
@@ -146,6 +151,84 @@ module.exports = (ordersCollection) => {
     ]).toArray();
 
     res.send(result)
+  });
+
+  // api for seller dashboard
+  router.get("/stats/:email", async (req, res) => {
+    const sellerEmail = req.params.email;
+  
+    try {
+      const result = await ordersCollection.aggregate([
+        {
+          $match: {
+            "sellersGroup.seller": sellerEmail
+          }
+        },
+        { $unwind: "$sellersGroup" },
+        {
+          $match: {
+            "sellersGroup.seller": sellerEmail
+          }
+        },
+        { $unwind: "$sellersGroup.items" },
+        {
+          $addFields: {
+            "sellersGroup.items.discountedPrice": {
+              $toDouble: "$sellersGroup.items.discountedPrice"
+            }
+          }
+        },
+        {
+          $group: {
+            _id: {
+              orderId: "$orderId",
+              paymentStatus: "$paymentStatus"
+            },
+            totalAmount: { $sum: "$sellersGroup.items.discountedPrice" }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalOrders: { $sum: 1 },
+            totalRevenue: { $sum: "$totalAmount" },
+            paidAmount: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$_id.paymentStatus", "paid"] },
+                  "$totalAmount",
+                  0
+                ]
+              }
+            },
+            pendingAmount: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$_id.paymentStatus", "pending"] },
+                  "$totalAmount",
+                  0
+                ]
+              }
+            }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            totalOrders: 1,
+            totalRevenue: 1,
+            paidAmount: 1,
+            pendingAmount: 1
+          }
+        }
+      ]).toArray();
+  
+      res.send(result);
+  
+    } catch (error) {
+      console.error("Error in seller stats:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
   });
 
   return router;
