@@ -2,7 +2,7 @@ module.exports = (ordersCollection) => {
   const express = require('express');
   const router = express.Router();
 
-  router.get('/', async (req, res) => {
+  router.get('/sellers', async (req, res) => {
     const sellerEmail = req.query.sellerEmail;
     try {
       const result = await ordersCollection
@@ -86,6 +86,7 @@ module.exports = (ordersCollection) => {
                 $toDouble: '$totalPrice',
               },
               status: '$paymentStatus',
+              paymentDate: '$paymentDate',
             },
           },
           {
@@ -103,6 +104,48 @@ module.exports = (ordersCollection) => {
         error: error.message,
       });
     }
+  });
+
+  router.get('/admin-dashboard', async (req, res) => {
+
+    const result = await ordersCollection.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+          totalAmount: { $sum: { $toDouble: '$totalPrice' } },
+          totalPaid: {
+            $sum: {
+              $cond: [
+                { $eq: ['$paymentStatus', 'paid'] },
+                { $toDouble: '$totalPrice' },
+                0,
+              ],
+            },
+          },
+          totalPending: {
+            $sum: {
+              $cond: [
+                { $eq: ['$paymentStatus', 'pending'] },
+                { $toDouble: '$totalPrice' },
+                0,
+              ],
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          totalOrders: 1,
+          totalAmount: 1,
+          totalPaid: 1,
+          totalPending: 1,
+        },
+      },
+    ]).toArray();
+
+    res.send(result)
   });
 
   return router;
