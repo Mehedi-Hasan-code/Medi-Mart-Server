@@ -1,10 +1,10 @@
 const { ObjectId } = require('mongodb');
 
-module.exports = (usersCollection) => {
+module.exports = (usersCollection, decodeFbToken, verifyAdmin) => {
   const express = require('express');
   const router = express.Router();
 
-  router.get('/', async (req, res) => {
+  router.get('/',decodeFbToken, verifyAdmin, async (req, res) => {
     try {
       const users = await usersCollection.find().toArray();
       res.status(200).json(users);
@@ -16,9 +16,15 @@ module.exports = (usersCollection) => {
     }
   });
 
-  router.get('/role', async (req, res) => {
+  router.get('/role',decodeFbToken, async (req, res) => {
     try {
       const email = req.query.email;
+      if (email !== req.decodedFbToken.email) {
+        return res.status(403).send({
+            success: false,
+            message: 'forbidden access',
+        });
+    }
       if (!email) {
         return res
           .status(400)
@@ -61,7 +67,7 @@ module.exports = (usersCollection) => {
     }
   });
 
-  router.patch('/:id', async (req, res) => {
+  router.patch('/:id',decodeFbToken, verifyAdmin, async (req, res) => {
     try {
       const { id } = req.params;
       const { role } = req.body;

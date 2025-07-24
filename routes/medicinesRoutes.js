@@ -1,4 +1,4 @@
-module.exports = (medicinesCollection) => {
+module.exports = (medicinesCollection,decodeFbToken, verifySeller) => {
   const express = require('express');
   const router = express.Router();
 
@@ -29,19 +29,15 @@ module.exports = (medicinesCollection) => {
         .sort({ discount: -1 })
         .limit(9)
         .toArray();
-      res
-        .status(200)
-        .json({
-          message: 'Top discount medicines fetched successfully',
-          medicines: result,
-        });
+      res.status(200).json({
+        message: 'Top discount medicines fetched successfully',
+        medicines: result,
+      });
     } catch (error) {
-      res
-        .status(500)
-        .json({
-          message: 'Failed to fetch top discount medicines',
-          error: error.message,
-        });
+      res.status(500).json({
+        message: 'Failed to fetch top discount medicines',
+        error: error.message,
+      });
     }
   });
 
@@ -57,11 +53,17 @@ module.exports = (medicinesCollection) => {
     }
   });
 
-  router.get('/seller', async (req, res) => {
+  router.get('/seller', decodeFbToken, verifySeller, async (req, res) => {
     try {
       const { email } = req.query;
       if (!email) {
         res.status(400).json({ message: 'Seller Email Is Required' });
+      }
+      if (email !== req.decodedFbToken.email) {
+        return res.status(403).send({
+          success: false,
+          message: 'forbidden access',
+        });
       }
       const query = { seller: email };
       const result = await medicinesCollection.find(query).toArray();
@@ -95,7 +97,7 @@ module.exports = (medicinesCollection) => {
     }
   });
 
-  router.post('/', async (req, res) => {
+  router.post('/',decodeFbToken, verifySeller, async (req, res) => {
     try {
       const medicine = req.body;
       if (!medicine) {

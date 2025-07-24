@@ -1,4 +1,4 @@
-module.exports = (categoriesCollection, medicinesCollection) => {
+module.exports = (categoriesCollection, medicinesCollection ,decodeFbToken, verifyAdmin) => {
   const express = require('express');
   const router = express.Router();
 
@@ -19,6 +19,10 @@ module.exports = (categoriesCollection, medicinesCollection) => {
 
     res.send(allCategories);
   });
+
+  router.post('/', decodeFbToken, verifyAdmin, async (req, res) => {
+    // post category
+  })
 
   return router;
 };

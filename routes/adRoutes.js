@@ -1,10 +1,10 @@
 const { ObjectId } = require('mongodb');
 
-module.exports = (addsCollection) => {
+module.exports = (addsCollection,decodeFbToken, verifyAdmin, verifySeller) => {
   const express = require('express');
   const router = express.Router();
 
-  router.get('/', async (req, res) => {
+  router.get('/',decodeFbToken, verifyAdmin, async (req, res) => {
     try {
       const result = await addsCollection.find().toArray();
       res.send(result);
@@ -15,9 +15,15 @@ module.exports = (addsCollection) => {
     }
   });
 
-  router.get('/seller', async (req, res) => {
+  router.get('/seller',decodeFbToken, verifySeller, async (req, res) => {
     try {
       const email = req.query.email;
+      if (email !== req.decodedFbToken.email) {
+        return res.status(403).send({
+            success: false,
+            message: 'forbidden access',
+        });
+    }
       const query = { seller: email };
       const result = await addsCollection.find(query).toArray();
       res.send(result);
@@ -40,7 +46,7 @@ module.exports = (addsCollection) => {
     }
   });
 
-  router.post('/', async (req, res) => {
+  router.post('/',decodeFbToken, verifySeller, async (req, res) => {
     try {
       const adData = req.body;
       const result = await addsCollection.insertOne(adData);
@@ -52,12 +58,11 @@ module.exports = (addsCollection) => {
     }
   });
 
-  router.patch('/:id', async (req, res) => {
+  router.patch('/:id',decodeFbToken, verifyAdmin, async (req, res) => {
     try {
       const { id } = req.params;
       const query = { _id: new ObjectId(id) };
       const statusData = req.body;
-      console.log(statusData);
       const updateDoc = { $set: statusData };
       const result = await addsCollection.updateOne(query, updateDoc);
       res.send(result);

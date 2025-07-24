@@ -1,13 +1,20 @@
-module.exports = (paymentsCollection, ordersCollection) => {
+module.exports = (paymentsCollection, ordersCollection, decodeFbToken) => {
   const express = require('express');
   const router = express.Router();
 
-  router.get('/', async (req, res) => {
+  router.get('/',decodeFbToken, async (req, res) => {
     const query = {};
     const email = req.query.email;
+    if (email !== req.decodedFbToken.email) {
+      return res.status(403).send({
+        success: false,
+        message: 'forbidden access',
+      });
+    }
     if (email) {
       query.buyer = email;
     }
+
     try {
       const result = await paymentsCollection.find(query).toArray();
       res.status(200).json(result);
@@ -36,12 +43,10 @@ module.exports = (paymentsCollection, ordersCollection) => {
         orders: ordersResult,
       });
     } catch (error) {
-      res
-        .status(500)
-        .json({
-          message: 'Failed to update payment and order status',
-          error: error.message,
-        });
+      res.status(500).json({
+        message: 'Failed to update payment and order status',
+        error: error.message,
+      });
     }
   });
 
