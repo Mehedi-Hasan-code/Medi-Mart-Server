@@ -41,6 +41,7 @@ module.exports = (medicinesCollection,decodeFbToken, verifySeller) => {
     }
   });
 
+  // get count for all medicine
   router.get('/count', async (req, res) => {
     try {
       const count = await medicinesCollection.countDocuments();
@@ -52,6 +53,21 @@ module.exports = (medicinesCollection,decodeFbToken, verifySeller) => {
       });
     }
   });
+
+    // get count for category medicine
+    router.get('/:category/count', async (req, res) => {
+      try {
+        const category = req.params.category
+        const query = { category }
+        const count = await medicinesCollection.countDocuments(query);
+        res.status(200).json({ count });
+      } catch (error) {
+        res.status(500).json({
+          message: 'Failed to get medicine count',
+          error: error.message,
+        });
+      }
+    });
 
   router.get('/seller', decodeFbToken, verifySeller, async (req, res) => {
     try {
@@ -81,19 +97,25 @@ module.exports = (medicinesCollection,decodeFbToken, verifySeller) => {
 
   router.get('/:category', async (req, res) => {
     try {
-      const { category } = req.params;
-      if (!category) {
-        res.status(400).json({ message: 'Category name is Required' });
+      const category = req.params.category
+      if(!category) {
+        res.status(400).json({message: 'category is required'})
       }
-      const query = { category };
-      const result = await medicinesCollection.find(query).toArray();
+      const query = { category }
+      const { limit, page } = req.query;
+      const skip = (page - 1) * limit;
+
+      const result = await medicinesCollection
+        .find(query)
+        .skip(skip)
+        .limit(Number(limit))
+        .toArray();
       res
         .status(200)
-        .json({ message: 'Medicines fetched successfully', medicines: result });
+        .json({ message: 'Medicine fetched successfully', result });
     } catch (error) {
-      res
-        .status(500)
-        .json({ message: 'Failed to fetch medicines', error: error.message });
+      console.log(error);
+      res.status(500).json({ message: 'Failed to get medicine', error });
     }
   });
 
