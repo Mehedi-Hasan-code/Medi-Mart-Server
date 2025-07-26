@@ -2,17 +2,18 @@ module.exports = (paymentsCollection, ordersCollection, decodeFbToken) => {
   const express = require('express');
   const router = express.Router();
 
-  router.get('/',decodeFbToken, async (req, res) => {
+  router.get('/', decodeFbToken, async (req, res) => {
     const query = {};
     const email = req.query.email;
-    if (email !== req.decodedFbToken.email) {
-      return res.status(403).send({
-        success: false,
-        message: 'forbidden access',
-      });
-    }
+
     if (email) {
       query.buyer = email;
+      if (email !== req.decodedFbToken.email) {
+        return res.status(403).send({
+          success: false,
+          message: 'forbidden access',
+        });
+      }
     }
 
     try {
