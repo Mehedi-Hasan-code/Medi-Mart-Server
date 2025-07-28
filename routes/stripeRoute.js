@@ -34,7 +34,7 @@ module.exports = (paymentsCollection, ordersCollection) => {
       };
 
       const line_items = getItemsDataForStripe();
-      console;
+
       const session = await stripe.checkout.sessions.create({
         line_items: line_items,
         mode: 'payment',
