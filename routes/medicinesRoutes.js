@@ -1,4 +1,4 @@
-module.exports = (medicinesCollection,decodeFbToken, verifySeller) => {
+module.exports = (medicinesCollection, decodeFbToken, verifySeller) => {
   const express = require('express');
   const router = express.Router();
 
@@ -54,20 +54,20 @@ module.exports = (medicinesCollection,decodeFbToken, verifySeller) => {
     }
   });
 
-    // get count for category medicine
-    router.get('/:category/count', async (req, res) => {
-      try {
-        const category = req.params.category
-        const query = { category }
-        const count = await medicinesCollection.countDocuments(query);
-        res.status(200).json({ count });
-      } catch (error) {
-        res.status(500).json({
-          message: 'Failed to get medicine count',
-          error: error.message,
-        });
-      }
-    });
+  // get count for category medicine
+  router.get('/:category/count', async (req, res) => {
+    try {
+      const category = req.params.category;
+      const query = { category };
+      const count = await medicinesCollection.countDocuments(query);
+      res.status(200).json({ count });
+    } catch (error) {
+      res.status(500).json({
+        message: 'Failed to get medicine count',
+        error: error.message,
+      });
+    }
+  });
 
   router.get('/seller', decodeFbToken, verifySeller, async (req, res) => {
     try {
@@ -95,13 +95,33 @@ module.exports = (medicinesCollection,decodeFbToken, verifySeller) => {
     }
   });
 
+  // Get top 6 latest medicines
+  router.get('/latest', async (req, res) => {
+    try {
+      const result = await medicinesCollection
+        .find()
+        .sort({ created_at: -1 })
+        .limit(6)
+        .toArray();
+      res.status(200).json({
+        message: 'Latest medicines fetched successfully',
+        medicines: result,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: 'Failed to fetch latest medicines',
+        error: error.message,
+      });
+    }
+  });
+
   router.get('/:category', async (req, res) => {
     try {
-      const category = req.params.category
-      if(!category) {
-        res.status(400).json({message: 'category is required'})
+      const category = req.params.category;
+      if (!category) {
+        res.status(400).json({ message: 'category is required' });
       }
-      const query = { category }
+      const query = { category };
       const { limit, page } = req.query;
       const skip = (page - 1) * limit;
 
@@ -119,7 +139,7 @@ module.exports = (medicinesCollection,decodeFbToken, verifySeller) => {
     }
   });
 
-  router.post('/',decodeFbToken, verifySeller, async (req, res) => {
+  router.post('/', decodeFbToken, verifySeller, async (req, res) => {
     try {
       const medicine = req.body;
       if (!medicine) {
